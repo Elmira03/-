@@ -1,0 +1,160 @@
+#include<iostream>
+#include<fstream>
+#include<string>
+void show_content();
+void show_menu();
+void show_header();
+using namespace std;
+int main() {
+    cout << "Content-type: text/html; charset=Windows-1251\n\n";
+    ifstream f("_index.html");
+    if (f.is_open()) {
+        auto sz = 65536;
+        auto buf = new char[sz];
+        while (!f.eof()) {
+            f.getline(buf, sz);
+            if (strcmp(buf, "<!--content-->") == 0) {
+                show_content();  //дополнительный текст
+            }
+            else if (!strcmp(buf, "<!--menu-->")) {
+                show_menu();
+            }
+            else if (!strcmp(buf, "<!--HEADER-->")) {
+                show_header();
+            }
+            cout << buf;
+        }
+        delete[] buf;
+        f.close();
+    }
+    else {
+        cout << "Не удалось открыть страницу :( ";
+    }
+}
+void show_header() {
+    cout << "Вторая страница(задание 1)";
+}
+void show_menu() {
+    ifstream f("menu.html");
+    if (f.is_open()) {
+        auto sz = 1024;
+        auto buf = new char[sz];
+        while (!f.eof()) {
+            f.getline(buf, sz);
+            char* name;
+            char* addrr = strtok_s(buf, " ", &name);
+            cout << "<div class='menu.html'>"
+                "<a href='" << addrr << "'> " <<
+                name << "</a>"
+                "</div>";
+        }
+    }
+}
+struct task
+{
+    char val; 
+    task* next = nullptr; 
+    int num;
+};
+void push(task*& stack, char val, int num) 
+{
+    task* newt = new task;
+    newt->val = val;
+    newt->num = num;
+    if (!stack) 
+    { 
+        stack = newt;  
+        return;
+    }
+    newt->next = stack;
+    stack = newt;
+} 
+bool pop(task*& stack, int& num) 
+{
+    if (!stack) {
+        return false;
+    }
+    task* newt = stack; 
+    num = stack->num;
+    stack = stack->next; 
+    delete newt;
+    return true;
+}
+char* peek(task* stack) {
+    if (!stack) return nullptr;
+    return &stack->val;
+}
+
+void show_content() {
+    task* stack = nullptr;
+    setlocale(LC_ALL, "ru");
+
+    char open[5];
+    char close[5];
+
+    open[1] = '(';
+    open[2] = '[';
+    open[3] = '{';
+    open[4] = '<';
+
+    close[1] = ')';
+    close[2] = ']';
+    close[3] = '}';
+    close[4] = '>';
+
+    bool tf = false;
+    int n;
+
+    cout << "<form method='get' action='index.cgi'>";
+    cout << "Введите выражение: <input type='text' name='task' maxlenght='80' size='80'<br>";
+    cout << "<input type='submit' value='Проверить'>";
+    cout << "</form>";
+
+#ifndef _DEBUG     
+    char* data = nullptr;
+    get_from_data(data);
+#else
+    const char* data = "task=%28%29";
+#endif
+    if (data && strlen(data) > 0) {
+        char* value = nullptr;
+        get_param_value(value, "task", data);  
+        cout << "<div>" << value << "</div>";
+        string t = value;
+        for (int i = 0; i < t.size(); i++) {
+            int sk = 0;
+            for (int c = 1; c < 5; c++) {
+                if (t[i] == close[c])
+                    sk = c;
+            }
+            if (sk == 0) {
+                for (int o = 1; o < 5; o++) {
+                    if (t[i] == open[o])
+                        sk = o;
+                }
+                if (sk != 0)
+                    push(stack, t[i], i);
+            }
+            else {
+                if (stack && open[sk] == *peek(stack)) {
+                    pop(stack, n);
+                }
+                else {
+                    tf = true;
+                    n = i + 1;
+                    break;
+                }
+            }
+        }
+        if (stack) {
+            while (stack) {
+                pop(stack, n);
+                cout << "<div>" << n + 1 << "</div>";
+            }
+            tf = true;
+        }
+        if (tf || peek(stack))   cout << "<div>" << "Скобки раставлены неверно" << "</div>";
+        else   cout << "<div>" << "Скобки раставлены верно" << "</div>"; 
+    }
+    delete[] data;
+}
